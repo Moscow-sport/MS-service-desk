@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Заявки — Московский спорт</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="site-header__inner">
+    <img src="logo.png" alt="Московский спорт" class="site-header__logo" id="siteLogo" style="cursor: pointer">
+    <h1 class="site-header__title">Заявки</h1>
+  </div>
+</header>
+
+<div class="card" style="max-width:900px">
+  <h1>Новая заявка</h1>
+  <div class="subtitle">АНО «Московский спорт»</div>
+
+  <label for="fio">ФИО</label>
+  <div class="autocomplete-wrap">
+    <input id="fio" type="text" placeholder="Начните вводить фамилию..." autocomplete="off">
+    <div class="suggestions" id="suggestions"></div>
+  </div>
+
+  <label for="cabinet">Кабинет</label>
+  <input id="cabinet" type="text" placeholder="Например, 102" autocomplete="off">
+
+  <label for="request">Что сделать?</label>
+  <textarea id="request" placeholder="Опишите, что нужно сделать..."></textarea>
+
+  <button id="submit" disabled>Отправить</button>
+
+  <div id="adminGate" style="margin-top:32px;padding-top:24px;border-top:1px solid #eee;text-align:center">
+  <div id="g_id_onload"
+       data-client_id="194451671723-gs7fbfum4t0mdqlglvlbq6898jflva5h.apps.googleusercontent.com"
+       data-callback="onSignIn"
+       data-auto_prompt="true"
+       data-cancel_on_tap_outside="false"></div>
+  <div id="loginMsg" style="font-size:13px;color:#666"></div>
+  </div>
+
+  <div id="adminPanel" style="display:none;margin-top:24px;padding-top:24px;border-top:2px solid #6f0701">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h2 style="margin:0">Админ-панель</h2>
+      <span id="adminEmail" style="color:#666;font-size:13px"></span>
+    </div>
+
+    <h3>Администраторы (редакторы таблицы)</h3>
+    <p style="font-size:12px;color:#666">
+      Кто редактор таблицы — тот админ. Добавляй/убирай прямо здесь.
+    </p>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <input id="newAdminEmail" type="email" placeholder="new-admin@example.com"
+             style="flex:1;padding:10px 12px;border:1px solid #ccc;border-radius:8px">
+      <button id="addAdminBtn" style="width:auto;margin:0;padding:10px 18px">Добавить</button>
+    </div>
+    <ul id="adminsList" style="list-style:none;padding:0;margin:0;font-size:14px"></ul>
+    <div id="adminMgmtMsg" style="margin-top:8px;font-size:13px;color:#444"></div>
+
+    <h3>Справочник сотрудников</h3>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+      <button id="loadCurrentBtn" style="flex:1;min-width:150px">Загрузить текущий</button>
+      <button id="uploadPptxBtn" style="flex:1;min-width:150px">Загрузить PPTX</button>
+      <button id="saveBtn" style="flex:1;min-width:150px;background:#2e7d32">Сохранить</button>
+    </div>
+    <input type="file" id="pptxFile" accept=".pptx" style="margin-bottom:8px">
+
+    <div style="display:flex;gap:8px;margin-bottom:8px">
+      <button id="addColBtn" style="flex:1;background:#555;margin-top:0">+ Столбец</button>
+      <button id="addRowBtn" style="flex:1;background:#555;margin-top:0">+ Строка</button>
+    </div>
+
+    <div class="emp-table-wrap">
+      <table id="employeesTable" class="emp-table">
+        <thead></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div id="statusMsg" style="margin-top:8px;font-size:13px;color:#444"></div>
+
+    <h3>Отчёт по заявкам</h3>
+    <p style="font-size:12px;color:#666">Выбери месяц — скачай файл или отправь в Telegram-беседу</p>
+    <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+      <input type="month" id="reportMonth" style="flex:1;min-width:160px;padding:10px 12px;border:1px solid #ccc;border-radius:8px">
+      <button id="reportDownloadBtn" style="width:auto;margin:0;padding:10px 18px">Скачать Excel</button>
+      <button id="reportTelegramBtn" style="width:auto;margin:0;padding:10px 18px;background:#229ED9">В Telegram</button>
+    </div>
+    <div id="reportArea" class="summary"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
