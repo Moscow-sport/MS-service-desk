@@ -10,7 +10,7 @@
 
 <header class="site-header">
   <div class="site-header__inner">
-    <img src="logo.png" alt="Московский спорт" class="site-header__logo">
+    <img src="logo.png" alt="Московский спорт" class="site-header__logo" id="siteLogo" style="cursor: pointer">
     <h1 class="site-header__title">Заявки</h1>
   </div>
 </header>
@@ -19,7 +19,7 @@
   <div class="check">✓</div>
   <h1>Заявка отправлена</h1>
   <p><b>Не закрывайте эту вкладку</b>, если хотите оставить комментарий по заявке.</p>
-  <p>Форма обратной связи появится автоматически, когда статус заявки будет «Выполнено».</p>
+  <p>Форма обратной связи появится автоматически, когда по заявке будет принято решение.</p>
 
   <div class="status" id="waitingMessage">
     Заявка зарегистрирована. Если потребуется, здесь появится форма для обратной связи.
@@ -30,6 +30,19 @@
     <textarea id="commentInput" placeholder="Ваш комментарий..."></textarea>
     <button id="sendComment">Отправить</button>
     <div class="done-msg" id="doneMsg">Спасибо! Комментарий отправлен.</div>
+  </div>
+
+  <div id="backBtn" style="display:none;margin-top:32px;padding-top:24px;border-top:1px solid #eee;text-align:center">
+    <a href="index.html" style="
+      display:inline-block;
+      padding:12px 24px;
+      background:#6f0701;
+      color:#fff;
+      text-decoration:none;
+      border-radius:8px;
+      font-weight:600;
+      font-size:14px;
+    ">← Подать ещё одну заявку</a>
   </div>
 </div>
 
