@@ -13,6 +13,9 @@ const sendComment    = document.getElementById('sendComment');
 const doneMsg        = document.getElementById('doneMsg');
 const backBtn        = document.getElementById('backBtn');
 
+// Кнопка «Подать ещё одну заявку» — показываем сразу
+if (backBtn) backBtn.style.display = 'block';
+
 let feedbackShown = false;
 let pollTimer     = null;
 
@@ -34,7 +37,6 @@ async function checkStatus() {
 
     const display = String(data.display || data.status || '').trim();
 
-    // 1) Отказано — «Отказано» + форма комментария
     if (display === 'Отказано') {
       feedbackShown = true;
       waitingMessage.textContent = 'Заявка отклонена. Вы можете оставить комментарий.';
@@ -46,7 +48,6 @@ async function checkStatus() {
       return;
     }
 
-    // 2) Выполнено — форма комментария
     if (data.done) {
       feedbackShown = true;
       waitingMessage.textContent = 'Вы можете оставить комментарий по заявке.';
@@ -73,7 +74,6 @@ sendComment.addEventListener('click', async () => {
     if (data.ok) {
       doneMsg.classList.add('visible');
       commentInput.disabled = true;
-      backBtn.style.display = 'block';
     } else {
       sendComment.disabled = false;
       alert('Ошибка: ' + (data.error || 'неизвестно'));
