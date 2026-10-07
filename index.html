@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+<meta name="googlebot" content="noindex, nofollow">
 <title>Заявки — Московский спорт</title>
 <link rel="stylesheet" href="style.css">
 <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -21,10 +23,7 @@
   <div class="subtitle">АНО «Московский спорт»</div>
 
   <label for="fio">ФИО</label>
-  <div class="autocomplete-wrap">
-    <input id="fio" type="text" placeholder="Начните вводить фамилию..." autocomplete="off">
-    <div class="suggestions" id="suggestions"></div>
-  </div>
+  <input id="fio" type="text" placeholder="Введите ФИО" autocomplete="off">
 
   <label for="cabinet">Кабинет</label>
   <input id="cabinet" type="text" placeholder="Например, 102" autocomplete="off">
@@ -35,12 +34,12 @@
   <button id="submit" disabled>Отправить</button>
 
   <div id="adminGate" style="margin-top:32px;padding-top:24px;border-top:1px solid #eee;text-align:center">
-  <div id="g_id_onload"
-       data-client_id="194451671723-gs7fbfum4t0mdqlglvlbq6898jflva5h.apps.googleusercontent.com"
-       data-callback="onSignIn"
-       data-auto_prompt="true"
-       data-cancel_on_tap_outside="false"></div>
-  <div id="loginMsg" style="font-size:13px;color:#666"></div>
+    <div id="g_id_onload"
+         data-client_id="194451671723-gs7fbfum4t0mdqlglvlbq6898jflva5h.apps.googleusercontent.com"
+         data-callback="onSignIn"
+         data-auto_prompt="true"
+         data-cancel_on_tap_outside="false"></div>
+    <div id="loginMsg" style="font-size:13px;color:#666"></div>
   </div>
 
   <div id="adminPanel" style="display:none;margin-top:24px;padding-top:24px;border-top:2px solid #6f0701">
@@ -50,9 +49,7 @@
     </div>
 
     <h3>Администраторы (редакторы таблицы)</h3>
-    <p style="font-size:12px;color:#666">
-      Кто редактор таблицы — тот админ. Добавляй/убирай прямо здесь.
-    </p>
+    <p style="font-size:12px;color:#666">Кто редактор таблицы — тот админ.</p>
     <div style="display:flex;gap:8px;margin-bottom:12px">
       <input id="newAdminEmail" type="email" placeholder="new-admin@example.com"
              style="flex:1;padding:10px 12px;border:1px solid #ccc;border-radius:8px">
@@ -84,7 +81,6 @@
     <div id="statusMsg" style="margin-top:8px;font-size:13px;color:#444"></div>
 
     <h3>Отчёт по заявкам</h3>
-    <p style="font-size:12px;color:#666">Выбери месяц — скачай файл или отправь в Telegram-беседу</p>
     <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap">
       <input type="month" id="reportMonth" style="flex:1;min-width:160px;padding:10px 12px;border:1px solid #ccc;border-radius:8px">
       <button id="reportDownloadBtn" style="width:auto;margin:0;padding:10px 18px">Скачать Excel</button>

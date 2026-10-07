@@ -4,7 +4,7 @@ function getApiUrl() {
   return url;
 }
 
-const row = Number(sessionStorage.getItem('ms_last_row') || 0);
+const requestId = String(sessionStorage.getItem('ms_last_request_id') || '').trim();
 
 const feedbackBlock  = document.getElementById('feedbackBlock');
 const waitingMessage = document.getElementById('waitingMessage');
@@ -13,7 +13,6 @@ const sendComment    = document.getElementById('sendComment');
 const doneMsg        = document.getElementById('doneMsg');
 const backBtn        = document.getElementById('backBtn');
 
-// Кнопка «Подать ещё одну заявку» — показываем сразу
 if (backBtn) backBtn.style.display = 'block';
 
 let feedbackShown = false;
@@ -24,18 +23,17 @@ function stopPolling() {
 }
 
 async function checkStatus() {
-  if (!row || feedbackShown) return;
-
+  if (!requestId || feedbackShown) return;
   try {
     const res = await fetch(getApiUrl(), {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ action: 'checkStatus', row })
+      body: JSON.stringify({ action: 'checkStatus', requestId })
     });
     const data = await res.json();
     if (!data.ok) return;
 
-    const display = String(data.display || data.status || '').trim();
+    const display = String(data.display || '').trim();
 
     if (display === 'Отказано') {
       feedbackShown = true;
@@ -62,13 +60,12 @@ async function checkStatus() {
 sendComment.addEventListener('click', async () => {
   const comment = commentInput.value.trim();
   if (!comment) return;
-
   sendComment.disabled = true;
   try {
     const res = await fetch(getApiUrl(), {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ action: 'addFeedback', row, comment })
+      body: JSON.stringify({ action: 'addFeedback', requestId, comment })
     });
     const data = await res.json();
     if (data.ok) {
