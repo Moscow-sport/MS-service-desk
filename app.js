@@ -4,14 +4,14 @@ function getApiUrl() {
   return url;
 }
 
-// ID-token текущего админа (получаем после Google Sign-In)
-let userCredential = '';
-let userEmail = '';
-
 // ===== ФОРМА ЗАЯВКИ =====
+// Храним ФИО→кабинет только в sessionStorage — при закрытии вкладки всё удаляется
 const LS_PERSONS = 'ms_persons';
-const loadPersons = () => { try { return JSON.parse(localStorage.getItem(LS_PERSONS) || '{}'); } catch { return {}; } };
-const savePersons = o => localStorage.setItem(LS_PERSONS, JSON.stringify(o));
+const loadPersons = () => {
+  try { return JSON.parse(sessionStorage.getItem(LS_PERSONS) || '{}'); }
+  catch { return {}; }
+};
+const savePersons = o => sessionStorage.setItem(LS_PERSONS, JSON.stringify(o));
 
 const fioInput = document.getElementById('fio');
 const cabinetInput = document.getElementById('cabinet');
@@ -19,7 +19,7 @@ const requestInput = document.getElementById('request');
 const submitBtn = document.getElementById('submit');
 const toast = document.getElementById('toast');
 
-// Автоподстановка кабинета по ФИО (из localStorage)
+// Автоподстановка кабинета из sessionStorage (только в рамках текущей вкладки)
 fioInput.addEventListener('blur', () => {
   const name = fioInput.value.trim();
   if (!name) return;
@@ -70,16 +70,23 @@ function showToast(text) {
   setTimeout(() => toast.classList.remove('visible'), 3000);
 }
 
-// ===== АДМИН: Google Sign-In =====
+// ===== АДМИН-ЧАСТЬ =====
+let userEmail = '';
+let userCredential = '';
+
 window.onSignIn = async function (resp) {
   const loginMsg = document.getElementById('loginMsg');
   loginMsg.textContent = 'Проверяю доступ...';
 
   try {
-    const part = resp.credential.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    const part = resp.credential.split('.')[1]
+      .replace(/-/g, '+')
+      .replace(/_/g, '/');
     const padded = part + '==='.slice((part.length + 3) % 4);
     const json = decodeURIComponent(
-      atob(padded).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')
+      atob(padded).split('').map(c =>
+        '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+      ).join('')
     );
     const payload = JSON.parse(json);
     userEmail = payload.email || '';
@@ -123,10 +130,12 @@ async function loadAdmins() {
     data.admins.forEach(a => {
       const li = document.createElement('li');
       li.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid #eee';
+
       const roleLabel = a.role === 'owner' ? 'Владелец' : 'Редактор';
       const left = document.createElement('span');
       left.innerHTML = esc(a.email) + ' <span style="color:#888;font-size:12px">— ' + roleLabel + '</span>';
       li.appendChild(left);
+
       if (a.role !== 'owner') {
         const btn = document.createElement('button');
         btn.textContent = 'Убрать';
@@ -175,7 +184,7 @@ document.getElementById('addAdminBtn').addEventListener('click', async () => {
   }
 });
 
-// ===== СПРАВОЧНИК =====
+// ===== СПРАВОЧНИК (таблица) =====
 const statusMsg = document.getElementById('statusMsg');
 const tableEl   = document.getElementById('employeesTable');
 const theadEl   = tableEl.querySelector('thead');
@@ -184,6 +193,7 @@ const tbodyEl   = tableEl.querySelector('tbody');
 function renderTable(codes, rows) {
   theadEl.innerHTML = '';
   tbodyEl.innerHTML = '';
+
   const trh = document.createElement('tr');
   codes.forEach(code => {
     const th = document.createElement('th');
@@ -209,13 +219,16 @@ function renderTable(codes, rows) {
       td.appendChild(inp);
       tr.appendChild(td);
     });
+
     const tdDel = document.createElement('td');
     const btn = document.createElement('button');
     btn.className = 'row-del';
     btn.textContent = '×';
+    btn.title = 'Удалить строку';
     btn.onclick = () => tr.remove();
     tdDel.appendChild(btn);
     tr.appendChild(tdDel);
+
     tbodyEl.appendChild(tr);
   });
 }
@@ -223,12 +236,14 @@ function renderTable(codes, rows) {
 function collectTable() {
   const codes = [];
   theadEl.querySelectorAll('input').forEach(inp => codes.push(inp.value.trim()));
+
   const rows = [];
   tbodyEl.querySelectorAll('tr').forEach(tr => {
     const row = [];
     tr.querySelectorAll('input').forEach(inp => row.push(inp.value));
     rows.push(row);
   });
+
   return { codes, rows };
 }
 
@@ -242,8 +257,11 @@ document.getElementById('loadCurrentBtn').addEventListener('click', async () => 
     });
     const data = await res.json();
     if (!data.ok) { statusMsg.textContent = 'Ошибка: ' + data.error; return; }
+
     const codes = data.codes || [];
-    const rows = (data.rows || []).map(r => codes.map((_, i) => String(r[i] == null ? '' : r[i])));
+    const rows = (data.rows || []).map(r =>
+      codes.map((_, i) => String(r[i] == null ? '' : r[i]))
+    );
     renderTable(codes, rows);
     statusMsg.textContent = `Загружено: ${codes.length} отделов, ${rows.length} строк.`;
   } catch (e) {
@@ -264,10 +282,12 @@ function bufToBase64(buf) {
 document.getElementById('uploadPptxBtn').addEventListener('click', async () => {
   const f = document.getElementById('pptxFile').files[0];
   if (!f) { statusMsg.textContent = 'Выберите файл PPTX'; return; }
+
   statusMsg.textContent = 'Читаю файл...';
   try {
     const buf = await f.arrayBuffer();
     const b64 = bufToBase64(buf);
+
     statusMsg.textContent = 'Парсинг...';
     const res = await fetch(getApiUrl(), {
       method: 'POST',
@@ -276,14 +296,18 @@ document.getElementById('uploadPptxBtn').addEventListener('click', async () => {
     });
     const data = await res.json();
     if (!data.ok) { statusMsg.textContent = 'Ошибка: ' + data.error; return; }
+
     const byDept = data.byDept || {};
     const codes = Object.keys(byDept);
     const maxLen = Math.max(0, ...codes.map(c => byDept[c].length));
     const rows = [];
-    for (let i = 0; i < maxLen; i++) rows.push(codes.map(c => byDept[c][i] || ''));
+    for (let i = 0; i < maxLen; i++) {
+      rows.push(codes.map(c => byDept[c][i] || ''));
+    }
     renderTable(codes, rows);
+
     const total = codes.reduce((s, c) => s + byDept[c].length, 0);
-    statusMsg.textContent = `Распознано: ${codes.length} отделов, ${total} человек.`;
+    statusMsg.textContent = `Распознано: ${codes.length} отделов, ${total} человек. Проверьте и нажмите «Сохранить».`;
   } catch (e) {
     statusMsg.textContent = 'Ошибка: ' + e.message;
   }
@@ -307,6 +331,7 @@ document.getElementById('addRowBtn').addEventListener('click', () => {
   const codes = [];
   theadEl.querySelectorAll('input').forEach(inp => codes.push(inp.value));
   if (!codes.length) { statusMsg.textContent = 'Сначала загрузите справочник.'; return; }
+
   const tr = document.createElement('tr');
   codes.forEach(() => {
     const td = document.createElement('td');
@@ -329,6 +354,7 @@ document.getElementById('addRowBtn').addEventListener('click', () => {
 document.getElementById('saveBtn').addEventListener('click', async () => {
   const payload = collectTable();
   if (!payload.codes.length) { statusMsg.textContent = 'Нечего сохранять.'; return; }
+
   statusMsg.textContent = 'Сохраняю...';
   try {
     const res = await fetch(getApiUrl(), {
@@ -350,7 +376,11 @@ async function generateReport(mode) {
   const area = document.getElementById('reportArea');
   const month = document.getElementById('reportMonth').value;
   if (!month) { area.textContent = 'Выберите месяц.'; return; }
-  area.textContent = mode === 'download' ? 'Формирую Excel...' : 'Отправляю в Telegram...';
+
+  area.textContent = mode === 'download'
+    ? 'Формирую Excel...'
+    : 'Формирую и отправляю в Telegram...';
+
   try {
     const res = await fetch(getApiUrl(), {
       method: 'POST',
@@ -359,11 +389,13 @@ async function generateReport(mode) {
     });
     const data = await res.json();
     if (!data.ok) { area.textContent = 'Ошибка: ' + data.error; return; }
+
     if (mode === 'download') {
       downloadXlsx(data.base64, data.filename);
-      area.innerHTML = '<b style="color:#2e7d32">Готово!</b>';
+      area.innerHTML = '<b style="color:#2e7d32">Готово!</b> Файл скачивается (' + data.rows + ' заявок за ' + data.month + ').';
     } else {
-      area.innerHTML = '<b style="color:#2e7d32">Отправлено!</b> Отчёт за ' + data.month;
+      area.innerHTML = '<b style="color:#2e7d32">Отправлено!</b> Отчёт за ' + data.month +
+                       ' (' + data.rows + ' заявок) — в Telegram-беседе.';
     }
   } catch (e) {
     area.textContent = 'Ошибка: ' + e.message;
@@ -382,11 +414,11 @@ function downloadXlsx(base64, filename) {
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
 }
 
-document.getElementById('reportDownloadBtn').addEventListener('click', () => generateReport('download'));
-document.getElementById('reportTelegramBtn').addEventListener('click', () => generateReport('telegram'));
+document.getElementById('reportDownloadBtn').addEventListener('click', function() { generateReport('download'); });
+document.getElementById('reportTelegramBtn').addEventListener('click', function() { generateReport('telegram'); });
 
 function esc(s) {
   return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -396,18 +428,23 @@ function esc(s) {
 (function () {
   const logo = document.getElementById('siteLogo');
   if (!logo) return;
+
   let clicks = 0;
   let resetTimer = null;
+
   logo.addEventListener('click', () => {
     clicks++;
     clearTimeout(resetTimer);
     resetTimer = setTimeout(() => { clicks = 0; }, 1500);
+
     if (clicks >= 3) {
       clicks = 0;
       clearTimeout(resetTimer);
+
       if (window.google && google.accounts && google.accounts.id) {
         google.accounts.id.prompt();
       }
+
       logo.style.transition = 'opacity .15s';
       logo.style.opacity = '0.4';
       setTimeout(() => { logo.style.opacity = '1'; }, 200);
