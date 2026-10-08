@@ -424,15 +424,19 @@ function esc(s) {
   return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-// ===== Скрытая активация One Tap (3 клика по логотипу) =====
+// ===== Скрытая активация One Tap (3 клика по заголовку) =====
 (function () {
-  const logo = document.getElementById('siteLogo');
-  if (!logo) return;
+  const titleEl = document.querySelector('.site-header__title');
+  if (!titleEl) return;
+
+  titleEl.style.cursor = 'pointer';
+  titleEl.style.userSelect = 'none';
+  titleEl.style.webkitUserSelect = 'none';
 
   let clicks = 0;
   let resetTimer = null;
 
-  logo.addEventListener('click', () => {
+  titleEl.addEventListener('click', () => {
     clicks++;
     clearTimeout(resetTimer);
     resetTimer = setTimeout(() => { clicks = 0; }, 1500);
@@ -445,9 +449,9 @@ function esc(s) {
         google.accounts.id.prompt();
       }
 
-      logo.style.transition = 'opacity .15s';
-      logo.style.opacity = '0.4';
-      setTimeout(() => { logo.style.opacity = '1'; }, 200);
+      titleEl.style.transition = 'opacity .15s';
+      titleEl.style.opacity = '0.4';
+      setTimeout(() => { titleEl.style.opacity = '1'; }, 200);
     }
   });
 })();
