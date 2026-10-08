@@ -43,18 +43,14 @@ submitBtn.addEventListener('click', () => {
   submitBtn.disabled = true;
   submitBtn.textContent = 'Отправка...';
 
-  // Запоминаем кабинет для автоподстановки в текущей вкладке
   const persons = loadPersons();
   persons[fio] = cabinet;
   savePersons(persons);
 
-  // Генерируем requestId на клиенте — сохраняем до отправки,
-  // чтобы success.html мог показать его и проверить статус
   const requestId = (crypto.randomUUID && crypto.randomUUID()) ||
                     (Date.now().toString(36) + Math.random().toString(36).slice(2));
   sessionStorage.setItem('ms_last_request_id', requestId);
 
-  // Отправляем — НЕ ждём ответа. keepalive не даёт браузеру отменить запрос при переходе.
   try {
     fetch(getApiUrl(), {
       method: 'POST',
@@ -64,15 +60,12 @@ submitBtn.addEventListener('click', () => {
         fio: fio,
         cabinet: cabinet,
         request: request,
-        requestId: requestId   // ← сервер использует этот ID (см. note ниже)
+        requestId: requestId
       }),
       keepalive: true
-    }).catch(function () { /* игнорируем — заявка всё равно уйдёт */ });
-  } catch (e) {
-    // даже если fetch не запустился — переходим на success
-  }
+    }).catch(function () {});
+  } catch (e) {}
 
-  // Мгновенный переход
   window.location.href = 'success.html';
 });
 
@@ -107,7 +100,7 @@ window.onSignIn = async function (resp) {
     const r = await fetch(getApiUrl(), {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ action: 'checkAdmin', idToken: userCredential })
+      body: JSON.stringify({ action: 'checkAdmin', email: userEmail })
     });
     const d = await r.json();
 
@@ -133,7 +126,7 @@ async function loadAdmins() {
     const res = await fetch(getApiUrl(), {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ action: 'getAdmins', idToken: userCredential })
+      body: JSON.stringify({ action: 'getAdmins', email: userEmail })
     });
     const data = await res.json();
     if (!data.ok) { adminMgmtMsg.textContent = 'Ошибка: ' + data.error; return; }
@@ -169,7 +162,7 @@ async function removeAdmin(email) {
   const res = await fetch(getApiUrl(), {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain' },
-    body: JSON.stringify({ action: 'removeAdmin', idToken: userCredential, targetEmail: email })
+    body: JSON.stringify({ action: 'removeAdmin', email: userEmail, targetEmail: email })
   });
   const data = await res.json();
   adminMgmtMsg.textContent = data.ok ? 'Убрано' : 'Ошибка: ' + data.error;
@@ -184,7 +177,7 @@ document.getElementById('addAdminBtn').addEventListener('click', async () => {
   const res = await fetch(getApiUrl(), {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain' },
-    body: JSON.stringify({ action: 'addAdmin', idToken: userCredential, newEmail })
+    body: JSON.stringify({ action: 'addAdmin', email: userEmail, newEmail })
   });
   const data = await res.json();
   if (data.ok) {
@@ -265,7 +258,7 @@ document.getElementById('loadCurrentBtn').addEventListener('click', async () => 
     const res = await fetch(getApiUrl(), {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ action: 'getEmployees', idToken: userCredential })
+      body: JSON.stringify({ action: 'getEmployees', email: userEmail })
     });
     const data = await res.json();
     if (!data.ok) { statusMsg.textContent = 'Ошибка: ' + data.error; return; }
@@ -304,7 +297,7 @@ document.getElementById('uploadPptxBtn').addEventListener('click', async () => {
     const res = await fetch(getApiUrl(), {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ action: 'parsePptxPreview', idToken: userCredential, fileBase64: b64 })
+      body: JSON.stringify({ action: 'parsePptxPreview', email: userEmail, fileBase64: b64 })
     });
     const data = await res.json();
     if (!data.ok) { statusMsg.textContent = 'Ошибка: ' + data.error; return; }
@@ -372,7 +365,7 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
     const res = await fetch(getApiUrl(), {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ action: 'saveEmployees', idToken: userCredential, data: payload })
+      body: JSON.stringify({ action: 'saveEmployees', email: userEmail, data: payload })
     });
     const data = await res.json();
     statusMsg.textContent = data.ok
@@ -397,7 +390,7 @@ async function generateReport(mode) {
     const res = await fetch(getApiUrl(), {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ action: 'generateMonthlyReport', month, idToken: userCredential, mode })
+      body: JSON.stringify({ action: 'generateMonthlyReport', month, email: userEmail, mode })
     });
     const data = await res.json();
     if (!data.ok) { area.textContent = 'Ошибка: ' + data.error; return; }
