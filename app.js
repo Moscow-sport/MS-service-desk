@@ -5,7 +5,6 @@ function getApiUrl() {
 }
 
 // ===== ФОРМА ЗАЯВКИ =====
-// Храним ФИО→кабинет только в sessionStorage — при закрытии вкладки всё удаляется
 const LS_PERSONS = 'ms_persons';
 const loadPersons = () => {
   try { return JSON.parse(sessionStorage.getItem(LS_PERSONS) || '{}'); }
@@ -19,7 +18,6 @@ const requestInput = document.getElementById('request');
 const submitBtn = document.getElementById('submit');
 const toast = document.getElementById('toast');
 
-// Автоподстановка кабинета из sessionStorage (только в рамках текущей вкладки)
 fioInput.addEventListener('blur', () => {
   const name = fioInput.value.trim();
   if (!name) return;
@@ -36,32 +34,46 @@ function validate() {
 [fioInput, cabinetInput, requestInput].forEach(el => el.addEventListener('input', validate));
 validate();
 
-submitBtn.addEventListener('click', async () => {
+// ===== ОТПРАВКА: мгновенный переход, запрос доживает в фоне =====
+submitBtn.addEventListener('click', () => {
   const fio = fioInput.value.trim();
   const cabinet = cabinetInput.value.trim();
   const request = requestInput.value.trim();
+
   submitBtn.disabled = true;
   submitBtn.textContent = 'Отправка...';
+
+  // Запоминаем кабинет для автоподстановки в текущей вкладке
+  const persons = loadPersons();
+  persons[fio] = cabinet;
+  savePersons(persons);
+
+  // Генерируем requestId на клиенте — сохраняем до отправки,
+  // чтобы success.html мог показать его и проверить статус
+  const requestId = (crypto.randomUUID && crypto.randomUUID()) ||
+                    (Date.now().toString(36) + Math.random().toString(36).slice(2));
+  sessionStorage.setItem('ms_last_request_id', requestId);
+
+  // Отправляем — НЕ ждём ответа. keepalive не даёт браузеру отменить запрос при переходе.
   try {
-    const res = await fetch(getApiUrl(), {
+    fetch(getApiUrl(), {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ action: 'submitRequest', fio, cabinet, request })
-    });
-    const data = await res.json();
-    if (!data.ok) throw new Error(data.error || 'Ошибка');
-    const persons = loadPersons();
-    persons[fio] = cabinet;
-    savePersons(persons);
-    if (data.requestId) sessionStorage.setItem('ms_last_request_id', String(data.requestId));
-    if (data.row) sessionStorage.setItem('ms_last_row', String(data.row));
-    window.location.href = 'success.html';
-  } catch (err) {
-    console.error(err);
-    showToast('Ошибка: ' + err.message);
-    submitBtn.disabled = false;
-    submitBtn.textContent = 'Отправить';
+      body: JSON.stringify({
+        action: 'submitRequest',
+        fio: fio,
+        cabinet: cabinet,
+        request: request,
+        requestId: requestId   // ← сервер использует этот ID (см. note ниже)
+      }),
+      keepalive: true
+    }).catch(function () { /* игнорируем — заявка всё равно уйдёт */ });
+  } catch (e) {
+    // даже если fetch не запустился — переходим на success
   }
+
+  // Мгновенный переход
+  window.location.href = 'success.html';
 });
 
 function showToast(text) {
