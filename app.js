@@ -5,7 +5,6 @@ function getApiUrl() {
 }
 
 // ===== ФОРМА ЗАЯВКИ =====
-// Храним ФИО→кабинет только в sessionStorage — при закрытии вкладки всё удаляется
 const LS_PERSONS = 'ms_persons';
 const loadPersons = () => {
   try { return JSON.parse(sessionStorage.getItem(LS_PERSONS) || '{}'); }
@@ -19,7 +18,6 @@ const requestInput = document.getElementById('request');
 const submitBtn = document.getElementById('submit');
 const toast = document.getElementById('toast');
 
-// Автоподстановка кабинета из sessionStorage (только в рамках текущей вкладки)
 fioInput.addEventListener('blur', () => {
   const name = fioInput.value.trim();
   if (!name) return;
@@ -36,32 +34,39 @@ function validate() {
 [fioInput, cabinetInput, requestInput].forEach(el => el.addEventListener('input', validate));
 validate();
 
-submitBtn.addEventListener('click', async () => {
+// ===== ОТПРАВКА: мгновенный переход, запрос доживает в фоне =====
+submitBtn.addEventListener('click', () => {
   const fio = fioInput.value.trim();
   const cabinet = cabinetInput.value.trim();
   const request = requestInput.value.trim();
+
   submitBtn.disabled = true;
   submitBtn.textContent = 'Отправка...';
+
+  const persons = loadPersons();
+  persons[fio] = cabinet;
+  savePersons(persons);
+
+  const requestId = (crypto.randomUUID && crypto.randomUUID()) ||
+                    (Date.now().toString(36) + Math.random().toString(36).slice(2));
+  sessionStorage.setItem('ms_last_request_id', requestId);
+
   try {
-    const res = await fetch(getApiUrl(), {
+    fetch(getApiUrl(), {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ action: 'submitRequest', fio, cabinet, request })
-    });
-    const data = await res.json();
-    if (!data.ok) throw new Error(data.error || 'Ошибка');
-    const persons = loadPersons();
-    persons[fio] = cabinet;
-    savePersons(persons);
-    if (data.requestId) sessionStorage.setItem('ms_last_request_id', String(data.requestId));
-    if (data.row) sessionStorage.setItem('ms_last_row', String(data.row));
-    window.location.href = 'success.html';
-  } catch (err) {
-    console.error(err);
-    showToast('Ошибка: ' + err.message);
-    submitBtn.disabled = false;
-    submitBtn.textContent = 'Отправить';
-  }
+      body: JSON.stringify({
+        action: 'submitRequest',
+        fio: fio,
+        cabinet: cabinet,
+        request: request,
+        requestId: requestId
+      }),
+      keepalive: true
+    }).catch(function () {});
+  } catch (e) {}
+
+  window.location.href = 'success.html';
 });
 
 function showToast(text) {
@@ -95,7 +100,7 @@ window.onSignIn = async function (resp) {
     const r = await fetch(getApiUrl(), {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ action: 'checkAdmin', idToken: userCredential })
+      body: JSON.stringify({ action: 'checkAdmin', email: userEmail })
     });
     const d = await r.json();
 
@@ -121,7 +126,7 @@ async function loadAdmins() {
     const res = await fetch(getApiUrl(), {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ action: 'getAdmins', idToken: userCredential })
+      body: JSON.stringify({ action: 'getAdmins', email: userEmail })
     });
     const data = await res.json();
     if (!data.ok) { adminMgmtMsg.textContent = 'Ошибка: ' + data.error; return; }
@@ -157,7 +162,7 @@ async function removeAdmin(email) {
   const res = await fetch(getApiUrl(), {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain' },
-    body: JSON.stringify({ action: 'removeAdmin', idToken: userCredential, targetEmail: email })
+    body: JSON.stringify({ action: 'removeAdmin', email: userEmail, targetEmail: email })
   });
   const data = await res.json();
   adminMgmtMsg.textContent = data.ok ? 'Убрано' : 'Ошибка: ' + data.error;
@@ -172,7 +177,7 @@ document.getElementById('addAdminBtn').addEventListener('click', async () => {
   const res = await fetch(getApiUrl(), {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain' },
-    body: JSON.stringify({ action: 'addAdmin', idToken: userCredential, newEmail })
+    body: JSON.stringify({ action: 'addAdmin', email: userEmail, newEmail })
   });
   const data = await res.json();
   if (data.ok) {
@@ -253,7 +258,7 @@ document.getElementById('loadCurrentBtn').addEventListener('click', async () => 
     const res = await fetch(getApiUrl(), {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ action: 'getEmployees', idToken: userCredential })
+      body: JSON.stringify({ action: 'getEmployees', email: userEmail })
     });
     const data = await res.json();
     if (!data.ok) { statusMsg.textContent = 'Ошибка: ' + data.error; return; }
@@ -292,7 +297,7 @@ document.getElementById('uploadPptxBtn').addEventListener('click', async () => {
     const res = await fetch(getApiUrl(), {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ action: 'parsePptxPreview', idToken: userCredential, fileBase64: b64 })
+      body: JSON.stringify({ action: 'parsePptxPreview', email: userEmail, fileBase64: b64 })
     });
     const data = await res.json();
     if (!data.ok) { statusMsg.textContent = 'Ошибка: ' + data.error; return; }
@@ -360,7 +365,7 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
     const res = await fetch(getApiUrl(), {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ action: 'saveEmployees', idToken: userCredential, data: payload })
+      body: JSON.stringify({ action: 'saveEmployees', email: userEmail, data: payload })
     });
     const data = await res.json();
     statusMsg.textContent = data.ok
@@ -385,7 +390,7 @@ async function generateReport(mode) {
     const res = await fetch(getApiUrl(), {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ action: 'generateMonthlyReport', month, idToken: userCredential, mode })
+      body: JSON.stringify({ action: 'generateMonthlyReport', month, email: userEmail, mode })
     });
     const data = await res.json();
     if (!data.ok) { area.textContent = 'Ошибка: ' + data.error; return; }
