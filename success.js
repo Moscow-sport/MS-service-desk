@@ -5,44 +5,42 @@ function getApiUrl() {
 }
 
 const requestId = String(sessionStorage.getItem('ms_last_request_id') || '').trim();
-
-const feedbackBlock  = document.getElementById('feedbackBlock');
+const feedbackBlock = document.getElementById('feedbackBlock');
 const waitingMessage = document.getElementById('waitingMessage');
-const commentInput   = document.getElementById('commentInput');
-const sendComment    = document.getElementById('sendComment');
-const doneMsg        = document.getElementById('doneMsg');
-const backBtn        = document.getElementById('backBtn');
+const commentInput = document.getElementById('commentInput');
+const sendComment = document.getElementById('sendComment');
+const doneMsg = document.getElementById('doneMsg');
+const backBtn = document.getElementById('backBtn');
 
 if (backBtn) backBtn.style.display = 'block';
 
 let feedbackShown = false;
-let pollTimer     = null;
-let pollInFlight  = false;
-let sendInFlight  = false;
+let pollTimer = null;
+let pollInFlight = false;
+let sendInFlight = false;
 
 function stopPolling() {
-  if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+  if (pollTimer) {
+    clearInterval(pollTimer);
+    pollTimer = null;
+  }
 }
 
 async function checkStatus() {
   if (!requestId || feedbackShown || pollInFlight) return;
   pollInFlight = true;
+
   try {
     const res = await fetch(getApiUrl(), {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({ action: 'checkStatus', requestId })
     });
+
     const data = await res.json();
-    if (!data.ok) {
-      if (String(data.error || '').toLowerCase().includes('request not found')) {
-        waitingMessage.textContent = 'Заявка не найдена. Проверьте, что она была отправлена и попробуйте снова.';
-        waitingMessage.style.color = '#c62828';
-        waitingMessage.style.background = '#fdecea';
-        stopPolling();
-      }
-      return;
-    }
+
+    // Если сервер ещё не записал строку — просто ждём дальше
+    if (!data.ok) return;
 
     const display = String(data.display || '').trim();
 
@@ -75,15 +73,19 @@ async function checkStatus() {
 sendComment.addEventListener('click', async () => {
   const comment = commentInput.value.trim();
   if (!comment || sendInFlight) return;
+
   sendInFlight = true;
   sendComment.disabled = true;
+
   try {
     const res = await fetch(getApiUrl(), {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({ action: 'addFeedback', requestId, comment })
     });
+
     const data = await res.json();
+
     if (data.ok) {
       doneMsg.classList.add('visible');
       commentInput.disabled = true;
