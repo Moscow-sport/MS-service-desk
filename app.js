@@ -4,7 +4,6 @@ function getApiUrl() {
   return url;
 }
 
-// ===== ФОРМА ЗАЯВКИ =====
 const LS_PERSONS = 'ms_persons';
 const loadPersons = () => {
   try { return JSON.parse(sessionStorage.getItem(LS_PERSONS) || '{}'); }
@@ -26,14 +25,16 @@ fioInput.addEventListener('blur', () => {
 });
 
 function validate() {
-  const ok = fioInput.value.trim() && cabinetInput.value.trim() && requestInput.value.trim();
-  submitBtn.disabled = !ok;
+  submitBtn.disabled = !(
+    fioInput.value.trim() &&
+    cabinetInput.value.trim() &&
+    requestInput.value.trim()
+  );
 }
 
 [fioInput, cabinetInput, requestInput].forEach(el => el.addEventListener('input', validate));
 validate();
 
-// ===== ОТПРАВКА: ждём ответа сервера =====
 submitBtn.addEventListener('click', async () => {
   const fio = fioInput.value.trim();
   const cabinet = cabinetInput.value.trim();
@@ -47,9 +48,20 @@ submitBtn.addEventListener('click', async () => {
   const persons = loadPersons();
   persons[fio] = cabinet;
   savePersons(persons);
+  
+  const contentSig = fio + '\u0001' + cabinet + '\u0001' + request;
+  let requestId = sessionStorage.getItem('ms_pending_request_id');
+  const pendingTs  = Number(sessionStorage.getItem('ms_pending_request_ts') || 0);
+  const pendingSig = sessionStorage.getItem('ms_pending_request_sig') || '';
+  const FRESH_MS   = 10 * 60 * 1000; // 10 минут
 
-  const requestId = (crypto.randomUUID && crypto.randomUUID()) ||
-    (Date.now().toString(36) + Math.random().toString(36).slice(2));
+  if (!requestId || pendingSig !== contentSig || (Date.now() - pendingTs) > FRESH_MS) {
+    requestId = (crypto.randomUUID && crypto.randomUUID()) ||
+      (Date.now().toString(36) + Math.random().toString(36).slice(2));
+    sessionStorage.setItem('ms_pending_request_id', requestId);
+    sessionStorage.setItem('ms_pending_request_ts', String(Date.now()));
+    sessionStorage.setItem('ms_pending_request_sig', contentSig);
+  }
   sessionStorage.setItem('ms_last_request_id', requestId);
 
   try {
@@ -66,9 +78,7 @@ submitBtn.addEventListener('click', async () => {
     });
 
     let data = {};
-    try {
-      data = await response.json();
-    } catch (e) {}
+    try { data = await response.json(); } catch (e) {}
 
     if (!response.ok || (data && data.ok === false)) {
       submitBtn.disabled = false;
@@ -77,8 +87,10 @@ submitBtn.addEventListener('click', async () => {
       return;
     }
 
-    // Успех — только теперь переходим
     alert('Заявка принята');
+    sessionStorage.removeItem('ms_pending_request_id');
+    sessionStorage.removeItem('ms_pending_request_ts');
+    sessionStorage.removeItem('ms_pending_request_sig');
     window.location.href = 'success.html';
   } catch (e) {
     submitBtn.disabled = false;
@@ -88,17 +100,24 @@ submitBtn.addEventListener('click', async () => {
 });
 
 function showToast(text) {
+  if (!toast) return;
   toast.textContent = text;
   toast.classList.add('visible');
   setTimeout(() => toast.classList.remove('visible'), 3000);
 }
 
-// ===== АДМИН-ЧАСТЬ =====
 let userEmail = '';
 let userCredential = '';
 
 window.onSignIn = async function (resp) {
   const loginMsg = document.getElementById('loginMsg');
+  if (!loginMsg) return;
+
+  if (!resp || !resp.credential) {
+    loginMsg.textContent = 'Не удалось войти';
+    return;
+  }
+
   loginMsg.textContent = 'Проверяю доступ...';
   try {
     const part = resp.credential.split('.')[1]
@@ -127,7 +146,6 @@ window.onSignIn = async function (resp) {
       return;
     }
     loginMsg.textContent = 'Доступ разрешён';
-    // ... дальнейшая логика админки
   } catch (err) {
     loginMsg.textContent = 'Ошибка проверки';
   }
